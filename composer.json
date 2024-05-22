@@ -1,0 +1,20 @@
+{
+    "name":"bonuscred/api-manager",
+    "description":"API server manager for handling HTTP requests and responses",
+    "type":"library",
+    "license":"GPL-3.0-or-later",
+    "authors":[
+      {
+        "name":"Daniel Franklin",
+        "email": "daniel@bonuspago.com.br"
+      }
+    ],
+    "autoload":{
+      "psr-4":{
+        "ApiManager\\": "src/"
+      }
+    },
+    "require":{
+      "php": ">=8.0"
+    }
+  }
