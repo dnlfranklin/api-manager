@@ -2,65 +2,40 @@
 
 namespace ApiManager\Http;
 
-use ApiManager\Provider\RoutesGroup;
+class Path{
 
-class Path {
-
-  private $path;
-  private $default_routes;
-  private $prefixes = [];
-
-  public function __construct($path, RoutesGroup $routes = null){
-    $this->path = trim($path, '/');
-    $this->default_routes = empty($routes) ? new RoutesGroup : $routes;
-  }
-
-  public function getPath(){
-    return $this->path;
-  }
-
-  public function setPath($path){
-    $this->path = trim($path, '/');  
-  } 
-
-  public function addCustomPrefix($prefix, RoutesGroup|null $routes = null){    
-    $prefix = trim($prefix, '/');
-    $this->prefixes[$prefix] = empty($routes) ? $this->default_routes : $routes; 
-  }  
-
-  public function getPathPart($prefix_sufix){
-    $prefix = null;
-    $sufix = $this->path;        
-    
-    foreach( $this->prefixes as $item => $routes ){
-        $itembar = $item.'/';        
-        $len = strlen($itembar);
-
-        if( substr($this->path, 0, $len) == $itembar || $this->path == $item ){
-            $prefix = $item;
-            $sufix = substr($this->path, $len);  
-        }        
+    public static function trim(string $path):string {
+        return trim($path, '/');  
     }
     
-    return $prefix_sufix == 'prefix' ? $prefix : trim($sufix, '/');
-  }
-
-  public function getPathPrefix($with_bar = false){
-    $prefix = $this->getPathPart('prefix');
-    return $with_bar ? $prefix.'/' : $prefix;
-  }
-
-  public function getPathSufix($with_bar = false){
-    $sufix = $this->getPathPart('sufix'); 
-    return $with_bar ? '/'.$sufix : $sufix;   
-  }
-
-  public function getPathRoutes(){
-    $prefix = $this->getPathPrefix();
+    public static function concat(string ...$paths):string {
+        $concat = '';
     
-    $group = empty($prefix) ? $this->default_routes : $this->prefixes[$prefix];
+        foreach($paths as $path){
+            $concat.= '/';
+            $concat.= self::trim($path);
+        }  
+    
+        return $concat;
+    }      
+    
+    public static function hasPrefixPath(string $path_prefix, string $path_target):bool {
+        $path_prefix = self::trim($path_prefix);
+        $path_target = self::trim($path_target);
+        
 
-    return $group->getRoutes();
-  }
+        return str_starts_with($path_target, $path_prefix);
+    }
+
+    public static function removePrefix(string $path_prefix, string $path_target):string {
+        $path_prefix = self::trim($path_prefix);
+        $path_target_format = self::trim($path_target);        
+
+        if($path_prefix == '' || !str_starts_with($path_target_format, $path_prefix)){
+            return $path_target;
+        }
+
+        return substr($path_target_format, strlen($path_prefix));        
+    }
 
 }

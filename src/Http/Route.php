@@ -2,78 +2,88 @@
 
 namespace ApiManager\Http;
 
-use ApiManager\Provider\Middleware;
+use ApiManager\Extension\MiddlewareExtension;
 
 class Route{
-
-    private $endpoint;
-    private $controller;
-    private $method;
-    private $middlewares;
-    private $http_method;
-
-    public function __construct(
-        $http_method, 
-        $endpoint, 
-        $controller, 
-        $method = NULL, 
-        Array $middlewares = []
-    ){
-        $this->endpoint = $endpoint;
-        $this->controller = $controller;
-        $this->method = $method;
-        $this->http_method = $http_method;        
-        $this->setMiddlewares($middlewares);
-    }
-
-    public function getEndpoint(){
-        return $this->endpoint;
-    }
-
-    public function setEndpoint($endpoint){
-        $this->endpoint = $endpoint;
-    }
-
-    public function getController(){
-        return $this->controller;
-    }
-
-    public function setController($controller){
-        $this->controller = $controller;
-    }
     
-    public function getMethod(){
-        return $this->method;
+    const METHODS = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS', 'HEAD'];
+
+    private $middlewares = [];
+    
+    public function __construct(
+        private string $method,
+        private string $path,
+        private \Closure $callback
+    ){}
+    
+    public function __get($prop){
+        if(property_exists($this, $prop)){
+            return $this->{$prop};
+        }
     }
 
-    public function setMethod($method){
-        $this->method = $method;
+    public function middleware(MiddlewareExtension|string $middleware, string $name = null):self {
+        if(!is_a($middleware, 'ApiManager\Extension\MiddlewareExtension', true)){            
+            throw new \InvalidArgumentException('$middleware must implements MiddlewareExtension');
+        }
+        
+        if(!$name){
+            $name = uniqid(rand());
+        }
+        
+        $this->middlewares[$name] = $middleware;
+
+        return $this;
     }
 
-    public function getMiddlewares(){
-        return $this->middlewares;
+    public static function get(string $path, callable $callback, Array $middlewares = []):self {
+        return self::create('GET', $path, $callback, $middlewares);
     }
 
-    public function setMiddlewares(Array $middlewares){
-        foreach( $middlewares as $middleware ){
-            if( !$middleware instanceof Middleware ){
-                throw new \Exception('Middleware must be a instance of Middleware.');     
-            }
+    public static function post(string $path, callable $callback, Array $middlewares = []):self {
+        return self::create('POST', $path, $callback, $middlewares);
+    }
+
+    public static function put(string $path, callable $callback, Array $middlewares = []):self {
+        return self::create('PUT', $path, $callback, $middlewares);
+    }
+
+    public static function delete(string $path, callable $callback, Array $middlewares = []):self {
+        return self::create('DELETE', $path, $callback, $middlewares);
+    }
+
+    public static function patch(string $path, callable $callback, Array $middlewares = []):self {
+        return self::create('PATCH', $path, $callback, $middlewares);
+    }
+
+    public static function options(string $path, callable $callback, Array $middlewares = []):self {
+        return self::create('OPTIONS', $path, $callback, $middlewares);
+    }
+
+    public static function head(string $path, callable $callback, Array $middlewares = []):self {
+        return self::create('HEAD', $path, $callback, $middlewares);
+    }
+
+    public static function validateMethod(string $method){
+        $method = strtoupper($method);
+
+        if(!in_array($method, self::METHODS)){
+            throw new \InvalidArgumentException('$method is not a valid HTTP Method');
         }
 
-        $this->middlewares = $middlewares;
+        return $method;
     }
 
-    public function appendMiddleware(Middleware $middleware){
-        $this->middlewares[] = $middleware;
-    }        
+    public static function create(string $method, string $path, callable $callback, Array $middlewares = []):self {
+        $method = self::validateMethod($method);
+        
+        $route = new self($method, $path, \Closure::fromCallable($callback));
 
-    public function getHttpMethod(){
-        return $this->http_method;
-    }
+        foreach($middlewares as $middleware){
+            $route->middleware($middleware);
+        }
 
-    public function setHttpMethod($http_method){
-        $this->http_method = $http_method;
+        return $route;
     }
 
 }
