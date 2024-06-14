@@ -9,16 +9,19 @@ use ApiManager\Http\Response;
 
 class Container{
 
-    private $redirect_path = null;
+    private $paths = [];
+    private $redirect_paths = [];
     private $callback_start = null;
     private $callback_complete = null;
     private $callback_error = null;
 
     public function __construct(
-        private string $path,
+        string|Array $path,
         private ContextExtension $context, 
         private string|null $method = null       
-    ){}
+    ){
+        is_string($path) ? $this->addPath($path) : array_map([$this, 'addPath'], $path);
+    }
 
     public function __get($prop){
         if(property_exists($this, $prop)){
@@ -26,8 +29,18 @@ class Container{
         }
     }
 
-    public function setRedirectPath(string $redirect_path){
-        $this->redirect_path = $redirect_path;
+    public function addPath(string $path){
+        $key = empty($path) || $path == '/' ? '/' : Path::trim($path);
+        
+        $this->paths[$key] = $path;
+    }
+
+    public function addRedirectPath(string $redirect_from, string $redirect_path){
+        $key = empty($redirect_path) || $redirect_path == '/' ? '/' : Path::trim($redirect_path);
+                
+        if(array_key_exists($key, $this->paths)){
+            $this->redirect_paths[$key][] = $redirect_from;
+        }
     }
     
     public function onStart(callable $callback):self {
@@ -49,28 +62,38 @@ class Container{
     }
     
     public function run(Request $request, Response $response){
-        $path = $this->path;
-        
-        if(!Path::hasPrefixPath($path, $request->originalUrl())){
-            if($this->redirect_path){
-                $path = $this->redirect_path;
-
-                if(!Path::hasPrefixPath($path, $request->originalUrl())){
-                    return;
-                }
-            }
-            else{
-                return;
-            }            
-        }
-
         if($this->method && strtoupper($request->httpMethod()) != strtoupper($this->method)){
             return;    
         }
+        
+        $path_container = null;
+        
+        foreach($this->paths as $key => $path){
+            if(Path::hasPrefixPath($path, $request->originalUrl())){
+                $path_container = $path;           
+                break;     
+            }
+            else{
+                $redirects = $this->redirect_paths[$key] ?? null;
+
+                if($redirects){
+                    foreach($redirects as $redirect){
+                        if(Path::hasPrefixPath($redirect, $request->originalUrl())){
+                            $path_container = $redirect;
+                            break 2;
+                        }
+                    }
+                }
+            }
+        }
+
+        if(!$path_container){
+            return;      
+        }
 
         try{
-            $request->setBaseUrl($path);
-
+            $request->setBaseUrl($path_container);
+            
             if($this->callback_start){
                 call_user_func($this->callback_start, $request, $response);
             }
