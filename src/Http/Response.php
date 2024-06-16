@@ -3,7 +3,14 @@
 namespace ApiManager\Http;
 
 class Response{
+
+    private $body;
     
+
+    public function getBodyContent(){
+        return $this->body;
+    }
+
     public function status(int $code):Response {
         http_response_code($code);
 
@@ -69,27 +76,27 @@ class Response{
             $this->json($body);
         }
         else{
-            echo $body;
+            $this->echo($body);
         }
     }
 
     public function sendStatus(int $statusCode){
         $this->status($statusCode);
         
-        echo \ApiManager\Provider\HttpCode::getMessage($statusCode);
+        $this->echo(\ApiManager\Provider\HttpCode::getMessage($statusCode));
     }
 
     public function json(mixed $body, int $flags = 0){
         $this->type('json');
         
-        echo json_encode($body, $flags);
+        $this->echo(json_encode($body, $flags));
     }
     
     public function end(mixed $body = null){
         $this->send($body);
 
         exit;
-    }
+    }    
     
     public function render(string $html_path, Array $data_source = [], callable $error = null){
         try{
@@ -196,6 +203,12 @@ class Response{
             
             header("Location: {$path}", true, $statusCode);
         }
-    }    
+    }
+    
+    private function echo(string $content){
+        $this->body.= $content;
+        
+        echo $content;
+    }
 
 }
