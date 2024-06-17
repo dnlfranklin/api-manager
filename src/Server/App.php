@@ -17,31 +17,31 @@ class App{
     private $redirects = [];
     
 
-    public function get(Array|string $path, callable $callback, callable $exception_handler = null):Container {
+    public function get(string $path, callable $callback, callable $exception_handler = null):Container {
         return $this->container($path, new Closured(\Closure::fromCallable($callback)), 'GET', $exception_handler);
     }
 
-    public function post(Array|string $path, callable $callback, callable $exception_handler = null):Container {
+    public function post(string $path, callable $callback, callable $exception_handler = null):Container {
         return $this->container($path, new Closured(\Closure::fromCallable($callback)), 'POST', $exception_handler);
     }
 
-    public function put(Array|string $path, callable $callback, callable $exception_handler = null):Container {
+    public function put(string $path, callable $callback, callable $exception_handler = null):Container {
         return $this->container($path, new Closured(\Closure::fromCallable($callback)), 'PUT', $exception_handler);
     }
 
-    public function delete(Array|string $path, callable $callback, callable $exception_handler = null):Container {
+    public function delete(string $path, callable $callback, callable $exception_handler = null):Container {
         return $this->container($path, new Closured(\Closure::fromCallable($callback)), 'DELETE', $exception_handler);
     }
 
-    public function patch(Array|string $path, callable $callback, callable $exception_handler = null):Container {
+    public function patch(string $path, callable $callback, callable $exception_handler = null):Container {
         return $this->container($path, new Closured(\Closure::fromCallable($callback)), 'PATCH', $exception_handler);
     }
 
-    public function all(Array|string $path, callable $callback, callable $exception_handler = null):Container {
+    public function all(string $path, callable $callback, callable $exception_handler = null):Container {
         return $this->container($path, new Closured(\Closure::fromCallable($callback)), null, $exception_handler);
     }
 
-    public function use(Array|string $path, ContextExtension|callable $context, callable $exception_handler = null):Container {
+    public function use(string $path, ContextExtension|callable $context, callable $exception_handler = null):Container {
         if(is_callable($context)){
             $context = new Closured(\Closure::fromCallable($context));    
         }
@@ -49,42 +49,34 @@ class App{
         return $this->container($path, $context, null, $exception_handler, false);
     }
 
-    public function redirect(string $path_from, string $path_to){
-        $this->redirects[Path::trim($path_from)] = $path_to;
+    public function redirect(string $path_from, string $path_to, int $status_code = 302){
+        $this->redirects[Path::trim($path_from)] = [$path_to, $status_code];
     }
 
-    public function init(bool $keep_path_tree = true){
+    public function init(){
         $priority_containers = $this->registered_containers['priority'];
         $default_containers = $this->registered_containers['default'];
         
-        if($keep_path_tree){
-            usort($default_containers, function ($a, $b) {
-                return $a->path <=> $b->path;
-            });
-        }
-
         $request  = new Request;
         $response = new Response;
 
-        foreach($priority_containers as $container){
-            foreach($this->redirects as $from => $to){
-                $container->addRedirectPath($from, $to);
+        foreach($this->redirects as $from => $to){
+            if($from == Path::trim($request->originalUrl())){
+                $response->redirect($to[0], $to[1]);    
             }
+        }
 
+        foreach($priority_containers as $container){
             $container->run($request, $response);
         }        
         
         foreach($default_containers as $container){
-            foreach($this->redirects as $from => $to){
-                $container->addRedirectPath($from, $to);
-            }
-
             $container->run($request, $response);
         }        
     }
 
     private function container(
-        Array|string $path, 
+        string $path, 
         ContextExtension $context, 
         string $method = null, 
         callable $exception_handler = null,

@@ -9,19 +9,16 @@ use ApiManager\Http\Response;
 
 class Container{
 
-    private $paths = [];
-    private $redirect_paths = [];
+    private $path_alias = [];
     private $callback_start = null;
     private $callback_complete = null;
     private $callback_error = null;
 
     public function __construct(
-        string|Array $path,
+        private string $path,
         private ContextExtension $context, 
         private string|null $method = null       
-    ){
-        is_string($path) ? $this->addPath($path) : array_map([$this, 'addPath'], $path);
-    }
+    ){}
 
     public function __get($prop){
         if(property_exists($this, $prop)){
@@ -29,18 +26,12 @@ class Container{
         }
     }
 
-    public function addPath(string $path){
-        $key = empty($path) || $path == '/' ? '/' : Path::trim($path);
-        
-        $this->paths[$key] = $path;
-    }
-
-    public function addRedirectPath(string $redirect_from, string $redirect_path){
-        $key = empty($redirect_path) || $redirect_path == '/' ? '/' : Path::trim($redirect_path);
+    public function alias(string $path){
+        $path = Path::concat($path);
                 
-        if(array_key_exists($key, $this->paths)){
-            $this->redirect_paths[$key][] = $redirect_from;
-        }
+        $this->path_alias[$path] = $path;   
+        
+        return $this;
     }
     
     public function onStart(callable $callback):self {
@@ -68,21 +59,13 @@ class Container{
         
         $path_container = null;
         
-        foreach($this->paths as $key => $path){
-            if(Path::hasPrefixPath($path, $request->originalUrl())){
-                $path_container = $path;           
-                break;     
-            }
-            else{
-                $redirects = $this->redirect_paths[$key] ?? null;
-
-                if($redirects){
-                    foreach($redirects as $redirect){
-                        if(Path::hasPrefixPath($redirect, $request->originalUrl())){
-                            $path_container = $redirect;
-                            break 2;
-                        }
-                    }
+        if(Path::hasPrefixPath($this->path, $request->originalUrl())){
+            $path_container = $this->path;   
+        }
+        else{
+            foreach($this->path_alias as $path){
+                if(Path::hasPrefixPath($path, $request->originalUrl())){
+                    $path_container = $path;                    
                 }
             }
         }

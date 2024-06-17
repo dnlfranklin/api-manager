@@ -7,30 +7,44 @@ class Response{
     private $body;
     
 
-    public function getBodyContent(){
+    public function headersSent():bool {
+        return headers_sent();
+    }
+    
+    public function getHeaders():Array {
+        return headers_list();    
+    }    
+
+    public function getCode():int {
+        $code = http_response_code();
+
+        return is_bool($code) ? 200 : $code;
+    }
+
+    public function getBodyContent():?string {
         return $this->body;
     }
 
-    public function status(int $code):Response {
+    public function status(int $code):self {
         http_response_code($code);
 
         return $this;
     }
 
-    public function append(string $field, string $value){
+    public function append(string $field, string $value):self {
         header("{$field}: $value", false);
 
         return $this;
     }    
 
-    public function set(string $field, string $value){
+    public function set(string $field, string $value):self {
         header("{$field}: $value");
 
         return $this;
     }
 
     public function get(string $field){
-        foreach($this->headers() as $header){
+        foreach($this->getHeaders() as $header){
             list($header_field, $header_value) = explode(':', $header);
 
             if(strtolower($field) == strtolower($header_field)){
@@ -39,7 +53,7 @@ class Response{
         }
     }     
     
-    public function type(string $type){
+    public function type(string $type):self {
         $mime = \ApiManager\Provider\Mime::get($type);
 
         $this->set('Content-Type', $mime ? $mime : $type);
@@ -47,7 +61,7 @@ class Response{
         return $this;
     }
 
-    public function links(Array $links){
+    public function links(Array $links):self {
         $items = [];
         
         foreach($links as $rel => $link){
@@ -57,19 +71,11 @@ class Response{
         $this->set('Link', implode(', ', $items));
 
         return $this;
-    }
+    }    
 
-    public function headers(){
-        return headers_list();    
-    }
-
-    public function headersSent(){
-        return headers_sent();
-    }
-
-    public function send(mixed $body = null){
+    public function send(mixed $body = null):self {
         if(!$body){
-            return;
+            return $this;
         }
         
         if(is_array($body)){
@@ -78,18 +84,24 @@ class Response{
         else{
             $this->echo($body);
         }
+
+        return $this;
     }
 
-    public function sendStatus(int $statusCode){
+    public function sendStatus(int $statusCode):self {
         $this->status($statusCode);
         
         $this->echo(\ApiManager\Provider\HttpCode::getMessage($statusCode));
+
+        return $this;
     }
 
-    public function json(mixed $body, int $flags = 0){
+    public function json(mixed $body, int $flags = 0):self {
         $this->type('json');
         
         $this->echo(json_encode($body, $flags));
+
+        return $this;
     }
     
     public function end(mixed $body = null){
