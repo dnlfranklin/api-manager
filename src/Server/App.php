@@ -3,6 +3,8 @@
 namespace ApiManager\Server;
 
 use ApiManager\Context\Closured;
+use ApiManager\Context\Router\Router;
+use ApiManager\Context\ServeStatic;
 use ApiManager\Extension\ContextExtension;
 use ApiManager\Http\Path;
 use ApiManager\Http\Request;
@@ -53,7 +55,7 @@ class App{
         $this->redirects[Path::trim($path_from)] = [$path_to, $status_code];
     }
 
-    public function init(){
+    public function run(){
         $priority_containers = $this->registered_containers['priority'];
         $default_containers = $this->registered_containers['default'];
         
@@ -70,8 +72,23 @@ class App{
             $container->run($request, $response);
         }        
         
+        $resolved = false;
+
         foreach($default_containers as $container){
+            $context = $container->context;
+            
+            if(
+                $resolved && 
+                ($context instanceof ServeStatic || $context instanceof Router)
+            ){
+                continue;
+            }
+            
             $container->run($request, $response);
+
+            if($context instanceof ServeStatic || $context instanceof Router){
+                $resolved = $container->resolved;
+            }                
         }        
     }
 

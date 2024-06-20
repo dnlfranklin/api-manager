@@ -11,8 +11,10 @@ class Container{
 
     private $path_alias = [];
     private $callback_start = null;
-    private $callback_complete = null;
+    private $callback_success = null;
     private $callback_error = null;
+    private $callback_resolved = null;
+    private $resolved = false;
 
     public function __construct(
         private string $path,
@@ -40,14 +42,20 @@ class Container{
         return $this;
     }
 
-    public function onComplete(callable $callback):self {
-        $this->callback_complete = $callback;
+    public function onSuccess(callable $callback):self {
+        $this->callback_success = $callback;
 
         return $this;
     }
 
     public function onError(callable $callback):self {
         $this->callback_error = $callback;
+
+        return $this;
+    }
+
+    public function onResolved(callable $callback):self {
+        $this->callback_resolved = $callback;
 
         return $this;
     }
@@ -83,8 +91,8 @@ class Container{
             
             $this->context->process($request, $response);                           
 
-            if($this->callback_complete){
-                call_user_func($this->callback_complete, $request, $response);
+            if($this->callback_success){
+                call_user_func($this->callback_success, $request, $response);
             }
         }
         catch(\Throwable $e){
@@ -94,6 +102,14 @@ class Container{
             }
 
             throw $e;
+        }
+        finally{
+            $this->resolved = true;
+
+            if($this->callback_resolved){
+                call_user_func($this->callback_resolved, $request, $response);
+                return;
+            }
         }
     }
 

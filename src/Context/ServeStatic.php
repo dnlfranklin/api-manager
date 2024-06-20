@@ -89,11 +89,13 @@ class ServeStatic implements ContextExtension{
             
             if($file->dotfile){
                 if($this->dotfiles == 'ignore'){
-                    $res->status(404)->end();
+                    $res->status(404);
+                    return;
                 }
                 
                 if($this->dotfiles == 'deny'){
-                    $res->status(403)->end();
+                    $res->status(403);
+                    return;
                 }
             }
 
@@ -102,7 +104,8 @@ class ServeStatic implements ContextExtension{
                 !in_array($file->extension, $this->extensions) && 
                 !$is_index)
             {
-                $res->status(403)->end();    
+                $res->status(403);
+                return;    
             }
 
             foreach($this->headers as $key => $value){
@@ -120,10 +123,10 @@ class ServeStatic implements ContextExtension{
             $res->set("Expires", $this->expires);
             $res->set("Cache-Control", $this->cachecontrol);           
             $res->type($file->extension);
-            $res->end(file_get_contents($filename));            
+            $res->send(file_get_contents($filename));
         }
 
-        $res->status(404)->end();
+        $res->status(404);
     }
 
 }
