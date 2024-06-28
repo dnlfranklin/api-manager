@@ -77,7 +77,7 @@ class RouteGroup{
         $map_methods = is_string($method) ? [$method] : $method;
         
         $this->routes[] = RouteMap::create(
-            $path, 
+            Path::concat($this->path, $path), 
             \Closure::fromCallable($callback),
             $map_methods
         );

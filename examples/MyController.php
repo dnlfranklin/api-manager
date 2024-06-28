@@ -1,7 +1,6 @@
 <?php
 
 use ApiManager\Extension\ControllerExtension;
-use ApiManager\Http\Path;
 use ApiManager\Http\Request;
 use ApiManager\Http\Response;
 
