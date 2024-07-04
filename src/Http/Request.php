@@ -63,7 +63,7 @@ class Request{
         return $this->header_params;
     }
 
-    public function getbodyParams(){
+    public function getbodyParams(){ 
         if(empty($this->body_string)){
             return [];    
         }
@@ -73,6 +73,7 @@ class Request{
         }
 
         switch($this->getContentType()){
+            case 'multipart/form-data':
             case 'application/x-www-form-urlencoded':
                 parse_str($this->body_string, $body_params);  
                 
@@ -96,7 +97,13 @@ class Request{
     
     public function getbodyString():string {
         if(is_null($this->body_string)){
-            $this->body_string = file_get_contents("php://input");  
+            $body = file_get_contents("php://input");
+            
+            if(empty($body) && !empty($_POST)){
+                $body = http_build_query($_POST);
+            }
+
+            $this->body_string = $body;
         }
 
         return $this->body_string;
@@ -120,27 +127,27 @@ class Request{
         );
     }
 
-    public function getHeader(string $name): array {
+    public function getHeader(string $name):Array {
         $value = $this->getHeaderLine($name);
         
-        if($value){
-            return explode(';', $value);
-        }
+        return $value ? explode(';', $value) : [];
     }
 
-    public function getHeaderLine(string $name){
+    public function getHeaderLine(string $name):?string {
         foreach($this->header_params as $header_key => $header_value){
             if(strtolower($name) == strtolower($header_key)){
                 return $header_value;
             }
-        }       
+        }
+        
+        return null;
     }
 
     public function hasHeader(string $name):bool {
         return empty($this->getHeaderLine($name));
     }
 
-    public function getContentType(): ?string{
+    public function getContentType():?string {
         $result = $this->getHeader('Content-Type');
         
         return $result ? $result[0] : null;
@@ -154,7 +161,7 @@ class Request{
         return $this->server_params['REQUEST_TIME'] ?? 0;
     } 
 
-    public function isMethod(string $method): bool{
+    public function isMethod(string $method):bool {
         return strtoupper($this->httpMethod()) == strtoupper($method);
     }
 
