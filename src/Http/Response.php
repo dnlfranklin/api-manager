@@ -214,6 +214,8 @@ class Response{
             }
             
             header("Location: {$path}", true, $statusCode);
+
+            $this->end();
         }
     }
     
