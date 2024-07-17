@@ -33,7 +33,7 @@ class Request{
     public function getPath():string {
         $url = parse_url($this->originalUrl());
 
-        return Path::removePrefix($this->base_url, $url['path']);
+        return Path::removePrefix($this->base_url, $url['path'] ?? '/');
     }    
 
     public function getServerParams():Array{
