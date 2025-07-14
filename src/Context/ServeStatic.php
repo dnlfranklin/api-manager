@@ -68,7 +68,7 @@ class ServeStatic implements ContextExtension{
             throw new \ApiManager\Exception\FileNotFoundException('Static directory not found');
         }        
 
-        $filename = Path::trim($this->rootdir).'/'.Path::trim($req->getPath());
+        $filename = $this->rootdir.'/'.Path::trim($req->getPath());
         
         if(!file_exists($filename)){
             throw new \ApiManager\Exception\FileNotFoundException('The file is unavailable or does not exist');
